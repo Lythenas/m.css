@@ -53,6 +53,7 @@ from _search import CssClass, ResultFlag, ResultMap, Trie, serialize_search_data
 
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../plugins'))
 import dot2svg
+import plantuml2svg
 import latex2svg
 import latex2svgextra
 import ansilexer
@@ -517,7 +518,7 @@ def parse_desc_internal(state: State, element: ET.Element, immediate_parent: ET.
             end_previous_paragraph = False
 
             # Straightforward elements
-            if i.tag in ['heading', 'blockquote', 'hruler', 'xrefsect', 'variablelist', 'verbatim', 'parblock', 'preformatted', 'itemizedlist', 'orderedlist', 'image', 'dot', 'dotfile', 'table', '{http://mcss.mosra.cz/doxygen/}div', 'htmlonly']:
+            if i.tag in ['heading', 'blockquote', 'hruler', 'xrefsect', 'variablelist', 'verbatim', 'parblock', 'preformatted', 'itemizedlist', 'orderedlist', 'image', 'dot', 'dotfile', 'table', '{http://mcss.mosra.cz/doxygen/}div', 'htmlonly', 'plantuml']:
                 end_previous_paragraph = True
 
             # <simplesect> describing return type is cut out of text flow, so
@@ -1071,6 +1072,29 @@ def parse_desc_internal(state: State, element: ET.Element, immediate_parent: ET.
             else:
                 out.parsed += '<div class="m-graph{}">{}</div>'.format(
                     ' ' + add_css_class if add_css_class else '', dot2svg.dot2svg(source, size))
+
+        elif i.tag == 'plantuml':
+            assert element.tag in ['para', '{http://mcss.mosra.cz/doxygen/}div']
+            has_block_elements = True
+
+            # Why the heck can't it just read the file and paste it into the
+            # XML?!
+            caption = None
+            source = i.text
+            if 'caption' in i.attrib:
+                caption = i.attrib['caption']
+
+            size = None
+            if 'width' in i.attrib:
+                size = 'width: {};'.format(i.attrib['width'])
+            elif 'height' in i.attrib:
+                size = 'height: {};'.format(i.attrib['height'])
+
+            if caption:
+                out.parsed += '<figure class="m-figure">{}<figcaption>{}</figcaption></figure>'.format(plantuml2svg.plantuml2svg(source, size), caption)
+            else:
+                out.parsed += '<div class="m-graph{}">{}</div>'.format(
+                    ' ' + add_css_class if add_css_class else '', plantuml2svg.plantuml2svg(source, size))
 
         elif i.tag == 'hruler':
             assert element.tag == 'para' # is inside a paragraph :/
@@ -3515,6 +3539,8 @@ def parse_doxyfile(state: State, doxyfile, values = None):
         ('M_VERSION_LABELS', 'VERSION_LABELS', bool),
 
         ('M_MATH_CACHE_FILE', 'M_MATH_CACHE_FILE', str),
+
+        ('M_PLANTUML_PARAMS', None, str),
     ]:
         if key not in values: continue
 
@@ -3653,6 +3679,8 @@ def run(state: State, *, templates=default_templates, wildcard=default_wildcard,
 
     # Configure graphviz/dot
     dot2svg.configure(state.doxyfile['DOT_FONTNAME'], state.doxyfile['DOT_FONTSIZE'])
+    # Configure plantuml
+    plantuml2svg.configure(state.doxyfile['M_PLANTUML_PARAMS'])
 
     if sort_globbed_files:
         xml_files_metadata.sort()

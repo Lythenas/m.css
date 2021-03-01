@@ -48,17 +48,18 @@ _attributes_dst = r"""<\g<element> """
 _additional_params = []
 _background = None
 
+_plantuml_jar_path = None
+
 def plantuml2svg(source, size=None, attribs=''):
+    if _plantuml_jar_path is None:
+        raise RuntimeError("PLANTUML_JAR_PATH not set")
     try:
-        # NOTE: assumes that there is an executable named "plantuml" in the path
-        # this should probably run through java
-        # java -jar '/usr/share/java/plantuml/plantuml.jar' "$@"
-        ret = subprocess.run(['plantuml', '-tsvg', "-pipe"] + _additional_params,
+        ret = subprocess.run(['java', '-jar', _plantuml_jar_path, '-tsvg', "-pipe"] + _additional_params,
                              input=source.encode('utf-8'), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if ret.returncode: print(ret.stderr.decode('utf-8'))
         ret.check_returncode()
     except FileNotFoundError: # pragma: no cover
-        raise RuntimeError("dot not found")
+        raise RuntimeError("plantuml not found")
 
     # First remove comments
     svg = _comment_src.sub('', ret.stdout.decode('utf-8'))
@@ -91,8 +92,10 @@ def plantuml2svg(source, size=None, attribs=''):
 
     return svg
 
-def configure(additional_params = None, background = None):
-    global _additional_params, _background
+def configure(plantuml_jar_path, additional_params = None, background = None):
+    global _plantuml_jar_path, _additional_params, _background
+
+    _plantuml_jar_path = plantuml_jar_path
 
     if _additional_params is not None:
         _additional_params = additional_params.split(' ')

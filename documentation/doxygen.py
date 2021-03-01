@@ -3541,6 +3541,7 @@ def parse_doxyfile(state: State, doxyfile, values = None):
         ('M_MATH_CACHE_FILE', 'M_MATH_CACHE_FILE', str),
 
         ('M_PLANTUML_PARAMS', None, str),
+        ('PLANTUML_JAR_PATH', None, str),
     ]:
         if key not in values: continue
 
@@ -3680,7 +3681,7 @@ def run(state: State, *, templates=default_templates, wildcard=default_wildcard,
     # Configure graphviz/dot
     dot2svg.configure(state.doxyfile['DOT_FONTNAME'], state.doxyfile['DOT_FONTSIZE'])
     # Configure plantuml
-    plantuml2svg.configure(state.doxyfile['M_PLANTUML_PARAMS'])
+    plantuml2svg.configure(state.doxyfile['PLANTUML_JAR_PATH'], state.doxyfile['M_PLANTUML_PARAMS'])
 
     if sort_globbed_files:
         xml_files_metadata.sort()
